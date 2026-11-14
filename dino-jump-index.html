@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dino Jump 🦖</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#f1f5f9;color:#172b22;font-family:system-ui,-apple-system,sans-serif}
+.game{width:min(680px,100%);background:white;border-radius:22px;padding:20px;box-shadow:0 12px 40px #0f172a18}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-weight:800}
+.stage{height:240px;position:relative;overflow:hidden;border:1px solid #cbd5e1;border-radius:16px;background:linear-gradient(#dff3ff,#f4fbff)}
+canvas{display:block;width:100%;height:100%;touch-action:manipulation}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;background:#ffffffb8;text-align:center;padding:16px}
+.overlay .dino{font-size:42px}.overlay strong{font-size:24px}
+button{border:0;border-radius:999px;padding:12px 22px;background:#16803d;color:white;font-size:16px;font-weight:800;cursor:pointer}
+.controls{display:flex;gap:10px;margin-top:14px}.controls button:first-child{flex:1}.controls .secondary{background:#e2e8f0;color:#172b22}
+.hint{text-align:center;color:#64748b;font-size:13px;margin:12px 0 0}
+</style>
+</head>
+<body>
+<main class="game">
+ <div class="top"><span>🦖 DINO JUMP</span><span>คะแนน: <span id="score">0</span></span></div>
+ <div class="stage">
+  <canvas id="game" aria-label="เกมไดโนเสาร์กระโดด"></canvas>
+  <div class="overlay" id="overlay"><div class="dino">🦖</div><strong>Dino Jump!</strong><span id="message">กระโดดข้ามกระบองเพชรให้ได้นานที่สุด</span><button id="start">เริ่มเกม</button></div>
+ </div>
+ <div class="controls"><button id="jump">⬆️ กระโดด</button><button class="secondary" id="restart">↻ เริ่มใหม่</button></div>
+ <p class="hint">แตะปุ่มกระโดดหรือแตะพื้นที่เกม • คอมพิวเตอร์กด Space หรือ ↑</p>
+</main>
+<script>
+(()=>{
+ const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+ const scoreEl=document.getElementById('score'),overlay=document.getElementById('overlay');
+ const startBtn=document.getElementById('start'),message=document.getElementById('message');
+ let W=600,H=240,scale=1,ground=195,raf=0,running=false,score=0,speed=5,frame=0,obstacles=[],clouds=[];
+ const p={x:55,y:ground-39,vy:0};
+ function resize(){const r=canvas.getBoundingClientRect();scale=Math.min(devicePixelRatio||1,2);W=r.width;H=r.height;canvas.width=W*scale;canvas.height=H*scale;ctx.setTransform(scale,0,0,scale,0,0);ground=H-43;if(!running){p.y=ground-39;draw()}}
+ function reset(){score=0;speed=5;frame=0;obstacles=[];clouds=[{x:W*.3,y:42},{x:W*.76,y:68}];p.y=ground-39;p.vy=0;scoreEl.textContent='0'}
+ function draw(){
+  ctx.clearRect(0,0,W,H);let sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#dff3ff');sky.addColorStop(1,'#f4fbff');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#fff';clouds.forEach(c=>{ctx.beginPath();ctx.arc(c.x,c.y,12,0,7);ctx.arc(c.x+13,c.y-6,15,0,7);ctx.arc(c.x+28,c.y,11,0,7);ctx.fill()});
+  ctx.strokeStyle='#78966a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,ground);ctx.lineTo(W,ground);ctx.stroke();
+  ctx.fillStyle='#8baf74';for(let i=0;i<W;i+=22)ctx.fillRect(i,ground+8,10,2);
+  obstacles.forEach(o=>{ctx.fillStyle='#39854b';ctx.fillRect(o.x+8,ground-o.h,10,o.h);ctx.fillRect(o.x,ground-o.h+12,9,9);ctx.fillRect(o.x+17,ground-o.h+20,9,9)});
+  const y=p.y;ctx.fillStyle='#39834a';ctx.fillRect(p.x+5,y+9,27,27);ctx.fillRect(p.x+23,y,14,20);ctx.fillRect(p.x+33,y+8,10,7);ctx.fillStyle='#fff';ctx.fillRect(p.x+31,y+4,5,5);ctx.fillStyle='#172b22';ctx.fillRect(p.x+34,y+5,2,3);ctx.fillStyle='#39834a';ctx.fillRect(p.x+1,y+15,8,6);ctx.fillRect(p.x+10,y+32,7,6);ctx.fillRect(p.x+26,y+32,7,6);
+ }
+ function jump(){if(running&&p.y>=ground-39)p.vy=-12.5}
+ function finish(){running=false;cancelAnimationFrame(raf);overlay.style.display='flex';message.textContent='คะแนนของคุณ: '+Math.floor(score);startBtn.textContent='เล่นอีกครั้ง'}
+ function tick(){if(!running)return;frame++;score+=.12;speed=Math.min(10,5+score/100);scoreEl.textContent=Math.floor(score);p.vy+=.58;p.y+=p.vy;if(p.y>ground-39){p.y=ground-39;p.vy=0}
+  if(frame%Math.max(48,Math.floor(90-score/5))===0)obstacles.push({x:W+10,h:25+Math.random()*22});
+  obstacles.forEach(o=>o.x-=speed);obstacles=obstacles.filter(o=>o.x>-35);clouds.forEach(c=>{c.x-=.4;if(c.x<-40)c.x=W+30});
+  for(const o of obstacles){if(p.x+34>o.x&&p.x+8<o.x+27&&p.y+38>ground-o.h+5){finish();return}}
+  draw();raf=requestAnimationFrame(tick)
+ }
+ function begin(){cancelAnimationFrame(raf);resize();reset();running=true;overlay.style.display='none';draw();tick()}
+ startBtn.addEventListener('click',begin);document.getElementById('restart').addEventListener('click',begin);document.getElementById('jump').addEventListener('click',jump);canvas.addEventListener('pointerdown',jump);
+ window.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(!running)begin();else jump()}});
+ new ResizeObserver(resize).observe(canvas);resize();
+})();
+</script>
+</body></html>
